@@ -6,6 +6,7 @@ A cross-platform (Only linux version is currently tested) desktop app (Python + 
 - **Qwen Code** (`~/.qwen`, or `$QWEN_HOME`)
 - **codewhale-tui** (`~/.codewhale`, or `$CODEWHALE_HOME`)
 - **opencode** (`~/.local/share/opencode`, or `$OPENCODE_DATA`; a SQLite database, not JSON files)
+- **Zed** (`~/.local/share/zed/threads/threads.db`, or `--zed-dir`/Settings override; SQLite with zstd-compressed thread JSON — transcripts need `libzstd` or the `zstd` CLI, metadata works without)
 
 Storage locations are auto-detected but fully overridable per tool from the in-app **Settings** dialog.
 
@@ -64,10 +65,10 @@ Logs are written alongside the config file, as `agentchatmanager.log`.
 python3 -m unittest discover -s tests -v
 ```
 
-Tests run only on test files under `tests/fixtures/` (and a synthetic SQLite
-`opencode.db` built in a temp dir for the opencode adapter) — they never touch
-your real `~/.claude`, `~/.qwen`, `~/.codewhale`, or `~/.local/share/opencode`
-data.
+Tests run only on test files under `tests/fixtures/` (and synthetic SQLite
+`opencode.db` / `threads.db` databases built in temp dirs for the opencode and
+Zed adapters) — they never touch your real `~/.claude`, `~/.qwen`,
+`~/.codewhale`, `~/.local/share/opencode`, or `~/.local/share/zed` data.
 
 ## Internationalization
 

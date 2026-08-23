@@ -61,5 +61,6 @@
   "tool.claude_code": "Claude Code",
   "tool.qwen_code": "Qwen Code",
   "tool.codewhale_tui": "codewhale-tui",
-  "tool.opencode": "opencode"
+  "tool.opencode": "opencode",
+  "tool.zed": "Zed"
 }
