@@ -5,6 +5,7 @@ A cross-platform (Only linux version is currently tested) desktop app (Python + 
 - **Claude Code** (`~/.claude`)
 - **Qwen Code** (`~/.qwen`, or `$QWEN_HOME`)
 - **codewhale-tui** (`~/.codewhale`, or `$CODEWHALE_HOME`)
+- **opencode** (`~/.local/share/opencode`, or `$OPENCODE_DATA`; a SQLite database, not JSON files)
 
 Storage locations are auto-detected but fully overridable per tool from the in-app **Settings** dialog.
 
@@ -63,8 +64,9 @@ Logs are written alongside the config file, as `agentchatmanager.log`.
 python3 -m unittest discover -s tests -v
 ```
 
-Tests run only on test files under `tests/fixtures/` in temporary
-directories — they never touch your real `~/.claude`, `~/.qwen`, or `~/.codewhale`
+Tests run only on test files under `tests/fixtures/` (and a synthetic SQLite
+`opencode.db` built in a temp dir for the opencode adapter) — they never touch
+your real `~/.claude`, `~/.qwen`, `~/.codewhale`, or `~/.local/share/opencode`
 data.
 
 ## Internationalization
