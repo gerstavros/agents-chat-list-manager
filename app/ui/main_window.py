@@ -2,24 +2,27 @@ from __future__ import annotations
 
 import queue
 import threading
-import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, ttk
+
+import customtkinter as ctk
 
 from .. import i18n
 from ..config import AppConfig
 from ..export import export_conversation
+from .dialogs import ask_yes_no, show_error, show_info
 from ..i18n import _
 from ..models import ConversationMeta
 from ..registry import build_adapters
 from ..service import ConversationService
+from ._ctk_theme import apply_paned_theme, apply_ttk_theme
 from .conversation_list import ConversationListPanel
 from .settings_dialog import SettingsDialog
 from .transcript_view import TranscriptViewPanel
 
 
 class MainWindow:
-    def __init__(self, root: tk.Tk, config: AppConfig):
+    def __init__(self, root: ctk.CTk, config: AppConfig):
         self.root = root
         self.config = config
         self.service = ConversationService(build_adapters(config))
@@ -33,15 +36,12 @@ class MainWindow:
         self.root.title(_("app.title"))
         self.root.geometry("1100x650")
 
-        menubar = tk.Menu(self.root)
-        file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label=_("menu.file.settings"), command=self.open_settings)
-        file_menu.add_separator()
-        file_menu.add_command(label=_("menu.file.exit"), command=self.root.quit)
-        menubar.add_cascade(label=_("menu.file"), menu=file_menu)
-        self.root.config(menu=menubar)
+        # No menubar: settings live in the toolbar (gear button next to Export).
 
+        # CustomTkinter has no paned window either; keep ttk's, styled to match.
         paned = ttk.PanedWindow(self.root, orient="horizontal")
+        self._paned = paned
+        apply_paned_theme(paned)
         paned.pack(fill="both", expand=True)
 
         self.list_panel = ConversationListPanel(
@@ -50,13 +50,14 @@ class MainWindow:
             on_delete=self.on_delete_request,
             on_export=self.on_export_request,
             on_refresh=self.refresh,
+            on_settings=self.open_settings,
         )
         self.transcript_panel = TranscriptViewPanel(paned)
         paned.add(self.list_panel, weight=1)
         paned.add(self.transcript_panel, weight=2)
 
-        self.status_var = tk.StringVar()
-        ttk.Label(self.root, textvariable=self.status_var, anchor="w").pack(fill="x", side="bottom")
+        self.status_label = ctk.CTkLabel(self.root, text=_("status.scanning"), anchor="w")
+        self.status_label.pack(fill="x", side="bottom")
 
         self._refresh_tool_options()
 
@@ -71,7 +72,7 @@ class MainWindow:
                     kind, payload = self._queue.get_nowait()
                     if kind == "conversations":
                         self.list_panel.set_data(payload)
-                        self.status_var.set(_("status.loaded", count=len(payload)))
+                        self.status_label.configure(text=_("status.loaded", count=len(payload)))
                     elif kind == "messages":
                         meta, messages = payload
                         self.transcript_panel.show_messages(meta, messages)
@@ -82,7 +83,7 @@ class MainWindow:
         self.root.after(100, poll)
 
     def refresh(self) -> None:
-        self.status_var.set(_("status.scanning"))
+        self.status_label.configure(text=_("status.scanning"))
         threading.Thread(target=self._scan_worker, daemon=True).start()
 
     def _scan_worker(self) -> None:
@@ -101,14 +102,18 @@ class MainWindow:
         self._queue.put(("messages", (meta, messages)))
 
     def on_delete_request(self, meta: ConversationMeta) -> None:
-        if not messagebox.askyesno(
-            _("confirm.delete_title"), _("confirm.delete_message", title=meta.title)
+        if not ask_yes_no(
+            self.root,
+            _("confirm.delete_title"),
+            _("confirm.delete_message", title=meta.title),
         ):
             return
         try:
             self.service.delete(meta)
         except OSError as exc:
-            messagebox.showerror(_("error.delete_title"), _("error.delete_message", error=str(exc)))
+            show_error(
+                self.root, _("error.delete_title"), _("error.delete_message", error=str(exc))
+            )
             return
         self.transcript_panel.clear()
         self.refresh()
@@ -130,15 +135,26 @@ class MainWindow:
         try:
             export_conversation(meta, messages, path, fmt)
         except OSError as exc:
-            messagebox.showerror(_("error.export_title"), _("error.export_message", error=str(exc)))
+            show_error(
+                self.root, _("error.export_title"), _("error.export_message", error=str(exc))
+            )
             return
-        messagebox.showinfo(_("export.success_title"), _("export.success_message", path=str(path)))
+        show_info(
+            self.root, _("export.success_title"), _("export.success_message", path=str(path))
+        )
 
     def open_settings(self) -> None:
         SettingsDialog(self.root, self.config, on_save=self._on_settings_saved)
 
     def _on_settings_saved(self) -> None:
         i18n.load_locale(self.config.language)
+        # Appearance switch: CTk widgets restyle automatically, but the ttk
+        # leftovers (Treeview/PanedWindow) and the transcript role tags need a
+        # manual re-apply against the new palette.
+        ctk.set_appearance_mode(self.config.appearance)
+        apply_ttk_theme(self.root)
+        apply_paned_theme(self._paned)
+        self.transcript_panel.apply_appearance(self.config.appearance)
         self.service = ConversationService(build_adapters(self.config))
         self._refresh_tool_options()
         self.refresh()

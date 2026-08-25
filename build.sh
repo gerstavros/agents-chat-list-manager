@@ -33,11 +33,14 @@ esac
 
 python -m PyInstaller --onefile --windowed --name agentchatmanager --clean --noconfirm \
     --add-data "locales${DATA_SEP}locales" \
+    --add-data "app/ui/matrix_theme.json${DATA_SEP}app/ui" \
     --hidden-import app.adapters.claude_code \
     --hidden-import app.adapters.qwen_code \
     --hidden-import app.adapters.codewhale_tui \
     --hidden-import app.adapters.opencode \
     --hidden-import app.adapters.zed \
+    --hidden-import PIL._imagingtk \
+    --hidden-import PIL._tkinter_finder \
     main.py
 
 echo

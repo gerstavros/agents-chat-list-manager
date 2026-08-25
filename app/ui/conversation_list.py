@@ -1,22 +1,28 @@
 from __future__ import annotations
 
+import sys
 import tkinter as tk
 from datetime import datetime, timezone
 from tkinter import ttk
 
+import customtkinter as ctk
+
 from ..i18n import _
 from ..models import ConversationMeta
+from ._ctk_theme import TREEVIEW_STYLE, apply_ttk_theme
+from .icons import Tooltip, gear_icon, refresh_icon, trash_icon
 
 _COLUMNS = ("tool", "project", "title", "updated", "messages")
 
 
-class ConversationListPanel(ttk.Frame):
-    def __init__(self, parent, on_select, on_delete, on_export, on_refresh):
+class ConversationListPanel(ctk.CTkFrame):
+    def __init__(self, parent, on_select, on_delete, on_export, on_refresh, on_settings):
         super().__init__(parent)
         self._on_select = on_select
         self._on_delete = on_delete
         self._on_export = on_export
         self._on_refresh = on_refresh
+        self._on_settings = on_settings
 
         self._all: list[ConversationMeta] = []
         self._filtered: list[ConversationMeta] = []
@@ -28,47 +34,117 @@ class ConversationListPanel(ttk.Frame):
         self._build_widgets()
 
     def _build_widgets(self) -> None:
-        toolbar = ttk.Frame(self)
-        toolbar.pack(fill="x", padx=4, pady=4)
+        toolbar = ctk.CTkFrame(self)
+        toolbar.pack(fill="x", padx=8, pady=(8, 4))
 
-        ttk.Label(toolbar, text=_("toolbar.search_placeholder")).pack(side="left", padx=(0, 4))
         self.search_var = tk.StringVar()
         self.search_var.trace_add("write", lambda *_args: self._apply_filters())
-        search_entry = ttk.Entry(toolbar, textvariable=self.search_var, width=24)
-        search_entry.pack(side="left", padx=(0, 4))
+        search_entry = ctk.CTkEntry(
+            toolbar,
+            textvariable=self.search_var,
+            width=180,
+            placeholder_text=_("toolbar.search_placeholder"),
+        )
+        search_entry.pack(side="left", padx=(0, 6))
 
         self.tool_var = tk.StringVar(value=_("toolbar.tool_all"))
-        self.tool_combo = ttk.Combobox(toolbar, textvariable=self.tool_var, state="readonly", width=16)
-        self.tool_combo.pack(side="left", padx=4)
-        self.tool_combo.bind("<<ComboboxSelected>>", lambda _e: self._apply_filters())
+        self.tool_combo = ctk.CTkComboBox(
+            toolbar,
+            variable=self.tool_var,
+            state="readonly",
+            width=170,
+            values=[_("toolbar.tool_all")],
+            command=lambda _choice: self._apply_filters(),
+        )
+        self.tool_combo.pack(side="left", padx=6)
 
         self.date_var = tk.StringVar(value=_("toolbar.date_all"))
-        self.date_combo = ttk.Combobox(
+        self.date_combo = ctk.CTkComboBox(
             toolbar,
-            textvariable=self.date_var,
+            variable=self.date_var,
             state="readonly",
-            width=14,
+            width=140,
             values=[_("toolbar.date_all"), _("toolbar.date_7d"), _("toolbar.date_30d")],
+            command=lambda _choice: self._apply_filters(),
         )
-        self.date_combo.pack(side="left", padx=4)
-        self.date_combo.bind("<<ComboboxSelected>>", lambda _e: self._apply_filters())
+        self.date_combo.pack(side="left", padx=6)
 
-        ttk.Button(toolbar, text=_("toolbar.refresh"), command=self._on_refresh).pack(side="left", padx=4)
-        ttk.Button(toolbar, text=_("toolbar.delete"), command=self._handle_delete).pack(side="left", padx=4)
-        ttk.Button(toolbar, text=_("toolbar.export"), command=self._handle_export).pack(side="left", padx=4)
+        refresh_btn = ctk.CTkButton(
+            toolbar, image=refresh_icon(), text="", width=38, command=self._on_refresh
+        )
+        refresh_btn.pack(side="left", padx=4)
+        Tooltip(refresh_btn, _("toolbar.refresh"))
 
+        delete_btn = ctk.CTkButton(
+            toolbar, image=trash_icon(), text="", width=38, command=self._handle_delete
+        )
+        delete_btn.pack(side="left", padx=4)
+        Tooltip(delete_btn, _("toolbar.delete"))
+
+        ctk.CTkButton(toolbar, text=_("toolbar.export"), width=90, command=self._handle_export).pack(
+            side="left", padx=4
+        )
+        settings_btn = ctk.CTkButton(
+            toolbar, image=gear_icon(), text="", width=38, command=self._on_settings
+        )
+        settings_btn.pack(side="left", padx=4)
+        Tooltip(settings_btn, _("toolbar.settings"))
+
+        # CustomTkinter has no table widget; keep ttk.Treeview, styled to match.
         self.tree = ttk.Treeview(self, columns=_COLUMNS, show="headings", selectmode="browse")
+        self.tree.configure(style=TREEVIEW_STYLE)
+        apply_ttk_theme(self)
         for col in _COLUMNS:
-            self.tree.heading(col, text=_(f"column.{col}"), command=lambda c=col: self._sort_by(c))
+            self.tree.heading(
+                col,
+                text=_(f"column.{col}"),
+                command=lambda c=col: self._sort_by(c),
+            )
             width = 90 if col in ("tool", "updated", "messages") else 220
             self.tree.column(col, width=width, anchor="w")
-        self.tree.pack(fill="both", expand=True, padx=4, pady=(0, 4))
+        self.tree.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         self.tree.bind("<<TreeviewSelect>>", self._handle_select)
+        self._build_context_menu()
+
+    def _build_context_menu(self) -> None:
+        """Right-click menu on the conversation table (Delete / Export;
+        Rename will be added later). Styled with the matrix palette — the
+        classic tk.Menu has no CustomTkinter equivalent."""
+        self._context_menu = tk.Menu(
+            self,
+            tearoff=0,
+            bg="#001400",
+            fg="#00FF00",
+            activebackground="#003B00",
+            activeforeground="#00FF00",
+            bd=0,
+            relief="flat",
+            font=("TkDefaultFont", 10),
+        )
+        self._context_menu.add_command(label=_("toolbar.delete"), command=self._handle_delete)
+        self._context_menu.add_command(label=_("toolbar.export"), command=self._handle_export)
+        self.tree.bind("<Button-3>", self._on_context_menu)
+        if sys.platform == "darwin":
+            self.tree.bind("<Button-2>", self._on_context_menu)
+
+    def _on_context_menu(self, event) -> None:
+        row = self.tree.identify_row(event.y)
+        if not row:
+            return
+        # Right-click selects the row under the cursor first (standard UX).
+        if row not in self.tree.selection():
+            self.tree.selection_set(row)
+            self.tree.focus(row)
+            self._on_select(self.get_selected())
+        try:
+            self._context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self._context_menu.grab_release()
 
     def set_tool_options(self, display_to_id: dict[str, str]) -> None:
         self._tool_display_to_id = display_to_id
         all_label = _("toolbar.tool_all")
-        self.tool_combo["values"] = [all_label] + list(display_to_id.keys())
+        self.tool_combo.configure(values=[all_label] + list(display_to_id.keys()))
         self.tool_var.set(all_label)
 
     def set_data(self, convs: list[ConversationMeta]) -> None:

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 import tkinter as tk
-from tkinter import ttk
-from tkinter.scrolledtext import ScrolledText
+
+import customtkinter as ctk
 
 from ..i18n import _
 from ..models import ConversationMeta, Message
@@ -14,8 +14,26 @@ _ROLE_TAGS = {
     "system": "role_system",
 }
 
+# Matrix green role palette per appearance mode (bright on dark, deep on light).
+_ROLE_COLORS = {
+    "dark": {
+        "role_user": "#00FF00",
+        "role_assistant": "#66FF66",
+        "role_system": "#00CC66",
+        "meta": "#00AA00",
+        "raw": "#33AA33",
+    },
+    "light": {
+        "role_user": "#005C00",
+        "role_assistant": "#008F11",
+        "role_system": "#007A5E",
+        "meta": "#4E7A4E",
+        "raw": "#6E8C6E",
+    },
+}
 
-class TranscriptViewPanel(ttk.Frame):
+
+class TranscriptViewPanel(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
         self._messages: list[Message] = []
@@ -24,41 +42,46 @@ class TranscriptViewPanel(ttk.Frame):
         self._build_widgets()
 
     def _build_widgets(self) -> None:
-        toolbar = ttk.Frame(self)
-        toolbar.pack(fill="x", padx=4, pady=4)
-        ttk.Checkbutton(
+        toolbar = ctk.CTkFrame(self)
+        toolbar.pack(fill="x", padx=8, pady=(8, 4))
+        ctk.CTkCheckBox(
             toolbar, text=_("transcript.raw_toggle"), variable=self._raw_var, command=self._render
         ).pack(side="left")
 
-        self.status_label = ttk.Label(self, text=_("status.no_selection"), anchor="w")
-        self.status_label.pack(fill="x", padx=4)
+        self.status_label = ctk.CTkLabel(self, text=_("status.no_selection"), anchor="w")
+        self.status_label.pack(fill="x", padx=8)
 
-        self.text = ScrolledText(self, wrap="word", state="disabled")
-        self.text.pack(fill="both", expand=True, padx=4, pady=4)
-        self.text.tag_configure("role_user", foreground="#2b6cb0")
-        self.text.tag_configure("role_assistant", foreground="#2f855a")
-        self.text.tag_configure("role_system", foreground="#805ad5")
-        self.text.tag_configure("meta", foreground="#718096")
-        self.text.tag_configure("raw", foreground="#a0aec0", font=("Courier", 9))
+        self.text = ctk.CTkTextbox(self, wrap="word", state="disabled")
+        self.text.pack(fill="both", expand=True, padx=8, pady=(4, 8))
+        self.apply_appearance(ctk.get_appearance_mode().lower())
+
+    def apply_appearance(self, appearance: str) -> None:
+        """Re-apply role tag colors for the active appearance mode (called at
+        build time and again when the user switches dark/light in Settings).
+        CTkTextbox forbids tag-level fonts (scaling-incompatible), so the raw
+        JSON tag only varies its color."""
+        colors = _ROLE_COLORS.get(appearance, _ROLE_COLORS["dark"])
+        for tag, color in colors.items():
+            self.text.tag_config(tag, foreground=color)
 
     def show_loading(self) -> None:
-        self.status_label.config(text=_("status.loading_conversation"))
+        self.status_label.configure(text=_("status.loading_conversation"))
         self._write("")
 
     def show_messages(self, meta: ConversationMeta, messages: list[Message]) -> None:
         self._meta = meta
         self._messages = messages
-        self.status_label.config(text=meta.title)
+        self.status_label.configure(text=meta.title)
         self._render()
 
     def clear(self) -> None:
         self._meta = None
         self._messages = []
-        self.status_label.config(text=_("status.no_selection"))
+        self.status_label.configure(text=_("status.no_selection"))
         self._write("")
 
     def _render(self) -> None:
-        self.text.config(state="normal")
+        self.text.configure(state="normal")
         self.text.delete("1.0", "end")
         for msg in self._messages:
             ts = msg.timestamp.strftime("%Y-%m-%d %H:%M:%S") if msg.timestamp else _("transcript.no_timestamp")
@@ -71,10 +94,10 @@ class TranscriptViewPanel(ttk.Frame):
             if self._raw_var.get():
                 raw_str = json.dumps(msg.raw, indent=2, ensure_ascii=False)
                 self.text.insert("end", raw_str + "\n\n", ("raw",))
-        self.text.config(state="disabled")
+        self.text.configure(state="disabled")
 
     def _write(self, content: str) -> None:
-        self.text.config(state="normal")
+        self.text.configure(state="normal")
         self.text.delete("1.0", "end")
         self.text.insert("end", content)
-        self.text.config(state="disabled")
+        self.text.configure(state="disabled")

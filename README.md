@@ -13,20 +13,29 @@ Storage locations are auto-detected but fully overridable per tool from the in-a
 ## Requirements
 
 - Python 3.10+
+- `customtkinter` (the only third-party Python package) — `pip install -r requirements.txt`
 - Tkinter — bundled with the standard CPython installer on Windows and macOS. On
   minimal Linux installs it may need a separate OS package (not a `pip` package):
   - Debian/Ubuntu: `sudo apt install python3-tk`
   - Arch/Manjaro: `sudo pacman -S tk`
   - Fedora: `sudo dnf install python3-tkinter`
 
-No third-party Python packages are required — everything runs from the standard
-library.
+CustomTkinter (and its `darkdetect`/`packaging` dependencies) plus **Pillow**
+(for the toolbar icons) are the only non-stdlib dependencies. The **built
+binary** (see below) bundles everything into a single self-contained file —
+end users install nothing.
 
 ## Running from source code
 
 ```bash
+pip install -r requirements.txt
 python3 main.py
 ```
+
+The UI uses a **Matrix-green theme** in two modes — **dark** (near-black
+backgrounds, bright terminal green) and **light** (pale green-white
+background, deep green text) — switchable from **Settings → Appearance**.
+The choice is persisted in `AppConfig` (`appearance` field).
 
 ## Building the binary
 
