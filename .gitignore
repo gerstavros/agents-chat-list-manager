@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
+.buildenv/
+build/
+dist/
+*.spec
 .codewhale/

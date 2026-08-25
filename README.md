@@ -28,6 +28,22 @@ library.
 python3 main.py
 ```
 
+## Building the binary
+
+```bash
+./build.sh
+```
+
+This creates a local build venv (`.buildenv/`, gitignored), installs
+PyInstaller into it, and produces `dist/agentchatmanager` — a single-file
+executable of the Tkinter desktop app. The build needs a working Tkinter in
+the system Python (see Requirements above — e.g. `sudo pacman -S tk` on Arch).
+
+**PyInstaller does not cross-compile.** Build on the same OS/architecture you
+plan to run the app on. The resulting binary links against the build
+machine's glibc, so older-glibc targets need the build done there (or in a
+matching container) — same caveat as the CLI sibling.
+
 ## Features
 
 - Merged conversation list across all configured tools, with columns for tool,

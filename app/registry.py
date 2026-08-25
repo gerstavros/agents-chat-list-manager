@@ -24,10 +24,18 @@ def discover_adapters() -> None:
         return
     from . import adapters as adapters_pkg
 
-    for _, name, _ in pkgutil.iter_modules(adapters_pkg.__path__):
-        if name == "base" or name.startswith("_"):
-            continue
-        importlib.import_module(f"{adapters_pkg.__name__}.{name}")
+    # Explicit imports so registration works inside a frozen/PyInstaller binary too,
+    # where modules live in the bundled PYZ archive and pkgutil.iter_modules can't
+    # enumerate them via filesystem scanning (it silently finds nothing there).
+    from .adapters import claude_code, codewhale_tui, opencode, qwen_code, zed  # noqa: F401
+
+    try:
+        for _, name, _ in pkgutil.iter_modules(adapters_pkg.__path__):
+            if name == "base" or name.startswith("_"):
+                continue
+            importlib.import_module(f"{adapters_pkg.__name__}.{name}")
+    except Exception:
+        pass  # best-effort: picks up extra adapter files dropped in during source-mode dev
     _discovered = True
 
 
