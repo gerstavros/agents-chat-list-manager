@@ -11,6 +11,7 @@ from ..i18n import _
 from ..models import ConversationMeta
 from ._ctk_theme import TREEVIEW_STYLE, apply_ttk_theme
 from .icons import Tooltip, gear_icon, refresh_icon, trash_icon
+from .menus import ContextMenu
 
 _COLUMNS = ("tool", "project", "title", "updated", "messages")
 
@@ -107,25 +108,13 @@ class ConversationListPanel(ctk.CTkFrame):
         self._build_context_menu()
 
     def _build_context_menu(self) -> None:
-        """Right-click menu on the conversation table (Delete / Export;
-        Rename will be added later). Styled with the matrix palette — the
-        classic tk.Menu has no CustomTkinter equivalent."""
-        self._context_menu = tk.Menu(
-            self,
-            tearoff=0,
-            bg="#001400",
-            fg="#00FF00",
-            activebackground="#003B00",
-            activeforeground="#00FF00",
-            bd=0,
-            relief="flat",
-            font=("TkDefaultFont", 10),
-        )
-        self._context_menu.add_command(label=_("toolbar.delete"), command=self._handle_delete)
-        self._context_menu.add_command(label=_("toolbar.export"), command=self._handle_export)
-        self.tree.bind("<Button-3>", self._on_context_menu)
+        """Right-click menu on the conversation table (Delete / Export; Rename
+        will be added later). Custom CTk popup — see app/ui/menus.py.
+        Bound to ButtonPress so releasing the button never activates an item."""
+        self._context_menu: ContextMenu | None = None
+        self.tree.bind("<ButtonPress-3>", self._on_context_menu)
         if sys.platform == "darwin":
-            self.tree.bind("<Button-2>", self._on_context_menu)
+            self.tree.bind("<ButtonPress-2>", self._on_context_menu)
 
     def _on_context_menu(self, event) -> None:
         row = self.tree.identify_row(event.y)
@@ -136,10 +125,20 @@ class ConversationListPanel(ctk.CTkFrame):
             self.tree.selection_set(row)
             self.tree.focus(row)
             self._on_select(self.get_selected())
-        try:
-            self._context_menu.tk_popup(event.x_root, event.y_root)
-        finally:
-            self._context_menu.grab_release()
+        self._open_context_menu(event.x_root, event.y_root)
+
+    def _open_context_menu(self, x: int, y: int) -> None:
+        if self._context_menu is not None:
+            self._context_menu.close()
+        menu = ContextMenu(
+            self,
+            [
+                (_("toolbar.delete"), self._handle_delete),
+                (_("toolbar.export"), self._handle_export),
+            ],
+        )
+        self._context_menu = menu
+        menu.show(x, y)
 
     def set_tool_options(self, display_to_id: dict[str, str]) -> None:
         self._tool_display_to_id = display_to_id
