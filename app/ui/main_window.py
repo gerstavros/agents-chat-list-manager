@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import queue
 import threading
+import webbrowser
 from pathlib import Path
 from tkinter import filedialog, ttk
 
@@ -56,8 +57,27 @@ class MainWindow:
         paned.add(self.list_panel, weight=1)
         paned.add(self.transcript_panel, weight=2)
 
-        self.status_label = ctk.CTkLabel(self.root, text=_("status.scanning"), anchor="w")
-        self.status_label.pack(fill="x", side="bottom")
+        # Footer: status on the left, author link on the right. Color pairs
+        # are (light, dark) tuples so CTk re-renders them automatically when
+        # the appearance mode changes.
+        footer = ctk.CTkFrame(self.root, fg_color="transparent")
+        footer.pack(fill="x", side="bottom")
+
+        self.status_label = ctk.CTkLabel(footer, text=_("status.scanning"), anchor="w")
+        self.status_label.pack(side="left", fill="x", expand=True, padx=8, pady=4)
+
+        self.footer_link = ctk.CTkButton(
+            footer,
+            text=_("footer.created_by"),
+            fg_color="transparent",
+            hover_color=("#FFF3D6", "#003B00"),
+            text_color=("#3E6B1F", "#00FF00"),
+            anchor="e",
+            height=24,
+            cursor="hand2",
+            command=lambda: webbrowser.open("https://gerstavros.com"),
+        )
+        self.footer_link.pack(side="right", padx=8, pady=2)
 
         self._refresh_tool_options()
 

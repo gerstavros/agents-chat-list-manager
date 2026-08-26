@@ -27,6 +27,8 @@
   "status.loading_conversation": "Loading conversation...",
   "status.no_selection": "Select a conversation to view its transcript",
 
+  "footer.created_by": "Created by GerStavros",
+
   "confirm.delete_title": "Delete conversation",
   "confirm.delete_message": "Delete this conversation permanently? This cannot be undone.\n\nTitle: {title}",
   "error.delete_title": "Delete failed",
