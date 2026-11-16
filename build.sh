@@ -35,6 +35,7 @@ python -m PyInstaller --onefile --windowed --name agentchatmanager --clean --noc
     --add-data "locales${DATA_SEP}locales" \
     --add-data "app/ui/matrix_theme.json${DATA_SEP}app/ui" \
     --hidden-import app.adapters.claude_code \
+    --hidden-import app.adapters.codex \
     --hidden-import app.adapters.qwen_code \
     --hidden-import app.adapters.codewhale_tui \
     --hidden-import app.adapters.opencode \

@@ -3,6 +3,7 @@
 A cross-platform (Only linux version is currently tested) desktop app (Python + Tkinter) that lists, searches, views, exports, and deletes conversation history from multiple AI coding CLI tools in one place:
 
 - **Claude Code** (`~/.claude`)
+- **Codex** (`~/.codex`, or `$CODEX_HOME`; JSONL rollout files under `sessions/<YYYY>/<MM>/<DD>/`)
 - **Qwen Code** (`~/.qwen`, or `$QWEN_HOME`)
 - **codewhale-tui** (`~/.codewhale`, or `$CODEWHALE_HOME`)
 - **opencode** (`~/.local/share/opencode`, or `$OPENCODE_DATA`; a SQLite database, not JSON files)
@@ -93,7 +94,7 @@ python3 -m unittest discover -s tests -v
 Tests run only on test files under `tests/fixtures/` (and synthetic SQLite
 `opencode.db` / `threads.db` databases built in temp dirs for the opencode and
 Zed adapters) — they never touch your real `~/.claude`, `~/.qwen`,
-`~/.codewhale`, `~/.local/share/opencode`, or `~/.local/share/zed` data.
+`~/.codewhale`, `~/.codex`, `~/.local/share/opencode`, or `~/.local/share/zed` data.
 
 ## Internationalization
 
